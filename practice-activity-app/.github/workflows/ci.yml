@@ -30,6 +30,11 @@ jobs:
           REPO: ${{ secrets.ECR_REPO }}
         run: |
           set -euo pipefail
+
+          ls -la
+          ls -la practice-activity-app
+          test -f practice-activity-app/Dockerfile
+
           IMAGE_SHA="${REGISTRY}/${REPO}:${GITHUB_SHA}"
           IMAGE_LATEST="${REGISTRY}/${REPO}:latest"
 
