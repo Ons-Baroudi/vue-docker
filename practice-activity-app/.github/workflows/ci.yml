@@ -6,7 +6,7 @@ on:
   workflow_dispatch:
 
 jobs:
-  docker-build-push:
+  build-and-push:
     runs-on: ubuntu-latest
     steps:
       - name: Checkout
@@ -20,12 +20,19 @@ jobs:
           aws-region: ${{ secrets.AWS_REGION }}
 
       - name: Log in to Amazon ECR
+        id: login-ecr
         uses: aws-actions/amazon-ecr-login@v2
 
       - name: Build Docker image
-        run: docker build -t ${{ secrets.ECR_REPO }}:latest -f practice-activity-app/Dockerfile practice-activity-app
+        env:
+          REGISTRY: ${{ steps.login-ecr.outputs.registry }}
+          REPO: ${{ secrets.ECR_REPO }}
+        run: |
+          docker build -t $REGISTRY/$REPO:latest -f practice-activity-app/Dockerfile practice-activity-app
 
       - name: Push Docker image to Amazon ECR
+        env:
+          REGISTRY: ${{ steps.login-ecr.outputs.registry }}
+          REPO: ${{ secrets.ECR_REPO }}
         run: |
-          docker tag ${{ secrets.ECR_REPO }}:latest ${{ secrets.ECR_REGISTRY }}/${{ secrets.ECR_REPO }}:latest
-          docker push ${{ secrets.ECR_REGISTRY }}/${{ secrets.ECR_REPO }}:latest
+          docker push $REGISTRY/$REPO:latest
