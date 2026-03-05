@@ -1,4 +1,4 @@
-name: CI - Build & Push Docker image to Amazon ECR
+name: pipeline
 
 on:
   push:
@@ -6,38 +6,26 @@ on:
   workflow_dispatch:
 
 jobs:
-  build-and-push:
+  docker-build-push:
     runs-on: ubuntu-latest
-
     steps:
       - name: Checkout
         uses: actions/checkout@v4
 
-      - name: Configure AWS credentials
+      - name: Configure AWS Credentials
         uses: aws-actions/configure-aws-credentials@v4
         with:
           aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
           aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
           aws-region: ${{ secrets.AWS_REGION }}
 
-      - name: Login to Amazon ECR
-        id: login-ecr
+      - name: Log in to Amazon ECR
         uses: aws-actions/amazon-ecr-login@v2
 
-      - name: Build, tag and push image (SHA + latest)
-        env:
-          REGISTRY: ${{ steps.login-ecr.outputs.registry }}
-          REPO: ${{ secrets.ECR_REPO }}
+      - name: Build Docker image
+        run: docker build -t ${{ secrets.ECR_REPO }}:latest -f practice-activity-app/Dockerfile practice-activity-app
+
+      - name: Push Docker image to Amazon ECR
         run: |
-          set -euo pipefail
-
-          ls -la
-          ls -la practice-activity-app
-          test -f practice-activity-app/Dockerfile
-
-          IMAGE_SHA="${REGISTRY}/${REPO}:${GITHUB_SHA}"
-          IMAGE_LATEST="${REGISTRY}/${REPO}:latest"
-
-          docker build -f practice-activity-app/Dockerfile -t "$IMAGE_SHA" -t "$IMAGE_LATEST" practice-activity-app
-          docker push "$IMAGE_SHA"
-          docker push "$IMAGE_LATEST"
+          docker tag ${{ secrets.ECR_REPO }}:latest ${{ secrets.ECR_REGISTRY }}/${{ secrets.ECR_REPO }}:latest
+          docker push ${{ secrets.ECR_REGISTRY }}/${{ secrets.ECR_REPO }}:latest
