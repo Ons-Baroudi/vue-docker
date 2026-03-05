@@ -1,4 +1,4 @@
-name: CI push to ECR Pipeline
+name: CI - Build & Push Docker image to Amazon ECR
 
 on:
   push:
@@ -8,14 +8,14 @@ on:
   workflow_dispatch:
 
 jobs:
-  docker-build-push:
+  build-and-push:
     runs-on: ubuntu-latest
 
     steps:
-      - name: Checkout code
+      - name: Checkout
         uses: actions/checkout@v4
 
-      - name: Configure AWS Credentials
+      - name: Configure AWS credentials
         uses: aws-actions/configure-aws-credentials@v4
         with:
           aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
@@ -26,14 +26,28 @@ jobs:
         id: login-ecr
         uses: aws-actions/amazon-ecr-login@v2
 
-      - name: Build, tag, and push Docker image
+      - name: Build, tag and push image (SHA + latest)
         env:
-          ECR_REGISTRY: ${{ steps.login-ecr.outputs.registry }}
-          ECR_REPO: ${{ secrets.ECR_REPO }}
-          IMAGE_TAG: ${{ github.sha }}
+          REGISTRY: ${{ steps.login-ecr.outputs.registry }}
+          REPO: ${{ secrets.ECR_REPO }}
         run: |
-          set -e
-          docker build -t $ECR_REGISTRY/$ECR_REPO:$IMAGE_TAG .
-          docker push $ECR_REGISTRY/$ECR_REPO:$IMAGE_TAG
-          docker tag $ECR_REGISTRY/$ECR_REPO:$IMAGE_TAG $ECR_REGISTRY/$ECR_REPO:latest
-          docker push $ECR_REGISTRY/$ECR_REPO:latest
+          set -euo pipefail
+
+          # Sanity checks (fails fast if a secret is empty)
+          if [ -z "${REGISTRY}" ] || [ -z "${REPO}" ]; then
+            echo "ERROR: REGISTRY or ECR_REPO is empty. Check your GitHub Secrets."
+            exit 1
+          fi
+
+          IMAGE_SHA="${REGISTRY}/${REPO}:${GITHUB_SHA}"
+          IMAGE_LATEST="${REGISTRY}/${REPO}:latest"
+
+          echo "Building: ${IMAGE_SHA}"
+          docker build -t "${IMAGE_SHA}" .
+
+          echo "Pushing: ${IMAGE_SHA}"
+          docker push "${IMAGE_SHA}"
+
+          echo "Tagging and pushing: ${IMAGE_LATEST}"
+          docker tag "${IMAGE_SHA}" "${IMAGE_LATEST}"
+          docker push "${IMAGE_LATEST}"
