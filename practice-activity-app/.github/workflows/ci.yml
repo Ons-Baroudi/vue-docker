@@ -30,16 +30,9 @@ jobs:
           REPO: ${{ secrets.ECR_REPO }}
         run: |
           set -euo pipefail
-
           IMAGE_SHA="${REGISTRY}/${REPO}:${GITHUB_SHA}"
           IMAGE_LATEST="${REGISTRY}/${REPO}:latest"
 
-          echo "Building: ${IMAGE_SHA}"
-          docker build -t "${IMAGE_SHA}" ./practice-activity-app
-
-          echo "Pushing: ${IMAGE_SHA}"
-          docker push "${IMAGE_SHA}"
-
-          echo "Tagging and pushing: ${IMAGE_LATEST}"
-          docker tag "${IMAGE_SHA}" "${IMAGE_LATEST}"
-          docker push "${IMAGE_LATEST}"
+          docker build -f practice-activity-app/Dockerfile -t "$IMAGE_SHA" -t "$IMAGE_LATEST" practice-activity-app
+          docker push "$IMAGE_SHA"
+          docker push "$IMAGE_LATEST"
