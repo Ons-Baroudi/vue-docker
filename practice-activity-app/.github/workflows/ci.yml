@@ -1,4 +1,4 @@
-name: CI - Build & Push Docker image to Amazon ECR
+name: CI - Build & Push to Amazon ECR
 
 on:
   push:
@@ -6,11 +6,11 @@ on:
   workflow_dispatch:
 
 jobs:
-  docker-build-push:
+  build-and-push:
     runs-on: ubuntu-latest
 
     steps:
-      - name: Checkout code
+      - name: Checkout
         uses: actions/checkout@v4
 
       - name: Configure AWS credentials
@@ -24,10 +24,17 @@ jobs:
         id: login-ecr
         uses: aws-actions/amazon-ecr-login@v2
 
-      - name: Build Docker image
+      - name: Build, tag, and push image
+        env:
+          ECR_REGISTRY: ${{ steps.login-ecr.outputs.registry }}
+          ECR_REPO: ${{ secrets.ECR_REPO }}
+          IMAGE_TAG: ${{ github.sha }}
         run: |
-          docker build -t ${{ secrets.ECR_REPO }}:latest .
+          set -e
+          echo "Pushing to: $ECR_REGISTRY/$ECR_REPO"
 
-      - name: Push Docker image to Amazon ECR
-        run: |
-          docker push ${{ secrets.ECR_REPO }}:latest
+          docker build -t $ECR_REGISTRY/$ECR_REPO:$IMAGE_TAG .
+          docker push $ECR_REGISTRY/$ECR_REPO:$IMAGE_TAG
+
+          docker tag $ECR_REGISTRY/$ECR_REPO:$IMAGE_TAG $ECR_REGISTRY/$ECR_REPO:latest
+          docker push $ECR_REGISTRY/$ECR_REPO:latest
