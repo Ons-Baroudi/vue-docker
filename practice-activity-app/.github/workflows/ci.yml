@@ -2,9 +2,7 @@ name: CI - Build & Push Docker image to Amazon ECR
 
 on:
   push:
-    branches:
-      - main
-      - master
+    branches: [main, master]
   workflow_dispatch:
 
 jobs:
@@ -33,17 +31,11 @@ jobs:
         run: |
           set -euo pipefail
 
-          # Sanity checks (fails fast if a secret is empty)
-          if [ -z "${REGISTRY}" ] || [ -z "${REPO}" ]; then
-            echo "ERROR: REGISTRY or ECR_REPO is empty. Check your GitHub Secrets."
-            exit 1
-          fi
-
           IMAGE_SHA="${REGISTRY}/${REPO}:${GITHUB_SHA}"
           IMAGE_LATEST="${REGISTRY}/${REPO}:latest"
 
           echo "Building: ${IMAGE_SHA}"
-          docker build -t "${IMAGE_SHA}" .
+          docker build -t "${IMAGE_SHA}" ./practice-activity-app
 
           echo "Pushing: ${IMAGE_SHA}"
           docker push "${IMAGE_SHA}"
